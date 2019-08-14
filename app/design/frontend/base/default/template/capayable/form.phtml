@@ -43,7 +43,7 @@
     }
     //if($_customer->getCustomerMiddlename() && $isLoggedIn)
     //  $initials = $_customer->getCustomerMiddlename();
-    $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout');
+    $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout') || true;
 
     $postcode = $billingAddress->getData("postcode");
     if($_customer->getPostalCode() && $isLoggedIn) {
@@ -57,14 +57,6 @@
 
 ?>
 <ul class="form-list" id="payment_form_<?php echo $_code ?>" style="display:none;">
-
-    <li>
-        <label for="<?php echo $_code?>_middlename" class="required"><em>*</em><?php echo $this->__('Initials')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
-        </div>
-    </li>
-
 
     <?php if(!$_quote->getCustomerDob()): ?>
         <li>
@@ -123,6 +115,7 @@
             </script>
         </li>
     <?php endif ?>
+
     <?php if(!$_quote->getCustomerGender()): ?>
         <li>
             <label for="<?php echo $_code?>_gender" class="required"><em>*</em><?php echo $this->__('Gender') ?></label>
@@ -174,39 +167,73 @@
             <input type="text" id="<?php echo $_code?>_corporation_name" name="payment[corporation_name]" class="input-text" value="<?php if($_customer->getCorporationName() && $isLoggedIn) echo $_customer->getCorporationName()?>" />
         </div>
     </li>
-    <li>
-        <label for="<?php echo $_code?>_street" class="required"><em>*</em><?php echo $this->__('Street')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet() && $isLoggedIn) echo $_customer->getStreet()?>" />
-        </div>
-    </li>
-    <li>
-        <label for="<?php echo $_code?>_house_number" class="required"><em>*</em><?php echo $this->__('House number')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php if($_customer->getHouseNumber() && $isLoggedIn) echo $_customer->getHouseNumber()?>" />
-        </div>
-    </li>
-    <li>
-        <label for="<?php echo $_code?>_house_suffix"><?php echo $this->__('House number suffix')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php if($_customer->getHouseSuffix() && $isLoggedIn) echo $_customer->getHouseSuffix()?>" />
-        </div>
-    </li>
+
+    <?php if($hasMageWorldOSC): ?>
+        
+        <input type="hidden" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
+
+        <input type="hidden" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet(0) && $isLoggedIn) echo $_customer->getStreet(0)?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php if($_customer->getStreet(1) && $isLoggedIn) echo $_customer->getStreet(1)?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php if($_customer->getHouseSuffix() && $isLoggedIn) echo $_customer->getHouseSuffix()?>" />
+
+        <input type="hidden" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
+        <input type="hidden" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
+
+    <?php else: ?>
+        
+        <?php if(!$initials): ?>
+            <li>
+                <label for="<?php echo $_code?>_middlename" class="required"><em>*</em><?php echo $this->__('Initials')?></label>
+                <div class="input-box">
+                    <input type="text" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
+                </div>
+            </li>
+        <?php endif; ?>
+        
+
+        <li>
+            <label for="<?php echo $_code?>_street" class="required"><em>*</em><?php echo $this->__('Street')?></label>
+            <div class="input-box">
+                <input type="text" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet() && $isLoggedIn) echo $_customer->getStreet()?>" />
+            </div>
+        </li>
+
+        <li>
+            <label for="<?php echo $_code?>_house_number" class="required"><em>*</em><?php echo $this->__('House number')?></label>
+            <div class="input-box">
+                <input type="text" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php if($_customer->getHouseNumber() && $isLoggedIn) echo $_customer->getHouseNumber()?>" />
+            </div>
+        </li>
+        <li>
+            <label for="<?php echo $_code?>_house_suffix"><?php echo $this->__('House number suffix')?></label>
+            <div class="input-box">
+                <input type="text" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php if($_customer->getHouseSuffix() && $isLoggedIn) echo $_customer->getHouseSuffix()?>" />
+            </div>
+        </li>
+        
+        <?php if(!$postcode): ?>
+
+            <li>
+                <label for="<?php echo $_code?>_postcode" class="required"><em>*</em><?php echo $this->__('Postal Code')?></label>
+                <div class="input-box">
+                    <input type="text" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
+                </div>
+            </li>
+
+        <?php endif; ?>
+
+        <?php if(!$city): ?>
+            <li>
+                <label for="<?php echo $_code?>_city" class="required"><em>*</em><?php echo $this->__('City')?></label>
+                <div class="input-box">
+                    <input type="text" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
+                </div>
+            </li>
+        <?php endif; ?>
+
+    <?php endif; ?>
     
-    <li>
-        <label for="<?php echo $_code?>_postcode" class="required"><em>*</em><?php echo $this->__('Postal Code')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
-        </div>
-    </li>
-    <li>
-        <label for="<?php echo $_code?>_city" class="required"><em>*</em><?php echo $this->__('City')?></label>
-        <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
-        </div>
-    </li>
-    
-</ul>
+    </ul>
 
 <script type="text/javascript">
 //<![CDATA[
@@ -292,6 +319,8 @@
             <?php if ($hasMageWorldOSC): ?>
                 listenAndApplyChanges('#billing\\:company', '#capayable_corporation_name');
                 listenAndApplyChanges('#billing\\:firstname', '#capayable_middlename');
+                listenAndApplyChanges('#billing\\:street1', '#capayable_street');
+                listenAndApplyChanges('#billing\\:street2', '#capayable_house_number');
                 listenAndApplyChanges('#billing\\:postcode', '#capayable_postcode');
                 listenAndApplyChanges('#billing\\:city', '#capayable_city');
             <?php endif ?>
