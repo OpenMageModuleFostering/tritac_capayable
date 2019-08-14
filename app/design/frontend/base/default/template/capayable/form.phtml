@@ -34,7 +34,7 @@
     $cocNumberCheck = Mage::getStoreConfig('payment/capayable/chamber_of_commerce_check');
     $billingAddress = $_quote->getBillingAddress();
 
-    $firstname = $billingAddress->getData("firstname");
+    $firstname = $billingAddress->getFirstname();
     $names = explode(" ", $firstname);
     $initials = "";
 
@@ -45,59 +45,42 @@
     //  $initials = $_customer->getCustomerMiddlename();
     $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout');
 
-    $postcode = $billingAddress->getData("postcode");
-    if($_customer->getPostalCode() && $isLoggedIn) {
-        $postcode = $_customer->getPostalCode();
-    }
+    $postcode = $billingAddress->getPostcode();
+    $city = $billingAddress->getCity();
+
+    $addressLines =  $billingAddress->getStreet();
+    $addressLineCount = count($billingAddress->getStreet());
+    $streetName = null;
+    $houseNumber = null;
+    $houseNumberSuffix = null;    
+
+    // Either there is just one line to enter the street and house number, or there
+    // are 2 but the second field was not filled out (used for a house number)
+    if($addressLineCount == 1 || ($addressLineCount == 2 && empty($addressLines[1])))
+    {
+        list($streetName, $houseNumber, $houseNumberSuffix) = sscanf($addressLines[0], "%[a-zA-Z ]%d%[^\t\n]");
         
-    $city = $billingAddress->getData("city");
-    if($_customer->getCity() && $isLoggedIn) {
-        $city = $_customer->getCity();
+        $streetName = trim($streetName);
+        $houseNumber = trim($houseNumber);
+        $houseNumberSuffix = trim($houseNumberSuffix);
     }
+    elseif($addressLineCount == 2)
+    {       
+        $streetName = trim($addressLines[0]);
 
-    function splitHouseNo($houseNo)
-    {
-        $numberIndex = strspn($houseNo, "0123456789");
-        $result = array(
-            'number' => substr($houseNo, 0, $numberIndex),
-            'suffix' => substr($houseNo, $numberIndex)
-        );
-        return $result;
-    }
+        list($houseNumber, $houseNumberSuffix) = sscanf($addressLines[1], "%d%[^\t\n]");
 
-    function getHouseSuffix()
-    {
-        if($isLoggedIn)
-        {
-            if($_customer->getHouseSuffix())
-            {
-                return $_customer->getHouseSuffix();
-            }
-            elseif($_customer->getStreet(1))
-            {
-                $result = splitHouseNo($_customer->getStreet(1));
-                return $result['suffix'];
-            }
-        }
-        return ''; 
+        $houseNumber = trim($houseNumber);
+        $houseNumberSuffix = trim($houseNumberSuffix);
     }
-    function getHouseNumber()
-    {
-        if($isLoggedIn)
-        {
-            if($_customer->getHouseNumber())
-            {
-                return $_customer->getHouseNumber();
-            }
-            elseif($_customer->getStreet(1))
-            {
-                $result = splitHouseNo($_customer->getStreet(1));
-                return $result['number'];
-            }
-        }
-        return ''; 
+    elseif($addressLineCount == 3)
+    {       
+        $streetName = trim($addressLines[0]);
+        $houseNumber = trim($addressLines[1]);
+        $houseNumberSuffix = trim($addressLines[2]);
     }
-
+    $alwaysShowAddress = false;
+    $showAddress = (!$streetName || !$houseNumber || !$postcode || !$city) || $alwaysShowAddress;
 ?>
 <ul class="form-list" id="payment_form_<?php echo $_code ?>" style="display:none;">
 
@@ -179,8 +162,8 @@
         <label for="<?php echo $_code?>_is_corporation"><?php echo $this->__('Is Corporation')?></label>
         <div class="input-box">
             <select name="payment[is_corporation]" id="<?php echo $_code ?>_is_corporation">
-                <option value="0" <?php if($_customer->getIsCorporation() == 0 && $isLoggedIn): ?>selected="selected"<?php endif ?>><?php echo $this->__('No')?></option>
-                <option value="1" <?php if($_customer->getIsCorporation() == 1 && $isLoggedIn): ?>selected="selected"<?php endif ?>><?php echo $this->__('Yes')?></option>
+                <option value="0" <?php if(!$billingAddress->getCompany()): ?>selected="selected"<?php endif; ?>><?php echo $this->__('No')?></option>
+                <option value="1" <?php if($billingAddress->getCompany()): ?>selected="selected"<?php endif; ?>><?php echo $this->__('Yes')?></option>
             </select>
         </div>
     </li>
@@ -207,7 +190,7 @@
     <li id="<?php echo $_code ?>_corporation_name_wrapper">
         <label for="<?php echo $_code?>_corporation_name"><?php echo $this->__('Corporation Name')?></label>
         <div class="input-box">
-            <input type="text" id="<?php echo $_code?>_corporation_name" name="payment[corporation_name]" class="input-text" value="<?php if($_customer->getCorporationName() && $isLoggedIn) echo $_customer->getCorporationName()?>" />
+            <input type="text" id="<?php echo $_code?>_corporation_name" name="payment[corporation_name]" class="input-text"  value="<?php echo $billingAddress->getCompany(); ?>" />
         </div>
     </li>
 
@@ -216,9 +199,9 @@
         
         <input type="hidden" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
 
-        <input type="hidden" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet(0) && $isLoggedIn) echo $_customer->getStreet(0)?>" />
-        <input type="hidden" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php echo getHouseNumber(); ?>" />
-        <input type="hidden" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php echo getHouseSuffix(); ?>" />
+        <input type="hidden" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php echo $streetName ?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php echo $houseNumber; ?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php echo $houseNumberSuffix; ?>" />
 
         <input type="hidden" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
         <input type="hidden" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
@@ -234,49 +217,44 @@
             </li>
         <?php endif; ?>
         
-
+        <?php if($showAddress): ?>
         <li>
             <label for="<?php echo $_code?>_street" class="required"><em>*</em><?php echo $this->__('Street')?></label>
             <div class="input-box">
-                <input type="text" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet() && $isLoggedIn) echo $_customer->getStreet()?>" />
+                <input type="text" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php echo $streetName; ?>" />
             </div>
         </li>
 
         <li>
             <label for="<?php echo $_code?>_house_number" class="required"><em>*</em><?php echo $this->__('House number')?></label>
             <div class="input-box">
-                <input type="text" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php if($_customer->getHouseNumber() && $isLoggedIn) echo $_customer->getHouseNumber()?>" />
+                <input type="text" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php echo $houseNumber; ?>" />
             </div>
         </li>
         <li>
             <label for="<?php echo $_code?>_house_suffix"><?php echo $this->__('House number suffix')?></label>
             <div class="input-box">
-                <input type="text" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php if($_customer->getHouseSuffix() && $isLoggedIn) echo $_customer->getHouseSuffix()?>" />
+                <input type="text" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php echo $houseNumberSuffix; ?>" />
             </div>
         </li>
-        
-        <?php if(!$postcode): ?>
 
-            <li>
-                <label for="<?php echo $_code?>_postcode" class="required"><em>*</em><?php echo $this->__('Postal Code')?></label>
-                <div class="input-box">
-                    <input type="text" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
-                </div>
-            </li>
+        <li>
+            <label for="<?php echo $_code?>_postcode" class="required"><em>*</em><?php echo $this->__('Postal Code')?></label>
+            <div class="input-box">
+                <input type="text" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
+            </div>
+        </li>
+
+        <li>
+            <label for="<?php echo $_code?>_city" class="required"><em>*</em><?php echo $this->__('City')?></label>
+            <div class="input-box">
+                <input type="text" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
+            </div>
+        </li>
 
         <?php endif; ?>
-
-        <?php if(!$city): ?>
-            <li>
-                <label for="<?php echo $_code?>_city" class="required"><em>*</em><?php echo $this->__('City')?></label>
-                <div class="input-box">
-                    <input type="text" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
-                </div>
-            </li>
-        <?php endif; ?>
-
     <?php endif; ?>
-    
+
     </ul>
 
 <script type="text/javascript">
@@ -350,6 +328,8 @@
 <script type="text/javascript">
 //<![CDATA[
     // Prototype-- http://michaelxavier.net/posts/2011-04-02-Document-Ready-in-Prototype.html
+    // 
+     $MW_Onestepcheckout = jQuery;
     (function() {
         var init = function(){
 
@@ -425,12 +405,20 @@
         var elm = $('<?php echo $_code ?>_is_corporation');
         if (elm.value == 1) {
             $('<?php echo $_code ?>_is_sole_wrapper').show();
+
             $('<?php echo $_code ?>_corporation_name_wrapper').show();
+            $('<?php echo $_code ?>_corporation_name').addClassName('required-entry');
+
             $('<?php echo $_code ?>_coc_number_wrapper').show();
+            $('<?php echo $_code ?>_coc_number').addClassName('required-entry');
         } else {
             $('<?php echo $_code ?>_is_sole_wrapper').hide();
+
             $('<?php echo $_code ?>_corporation_name_wrapper').hide();
+            $('<?php echo $_code ?>_corporation_name').removeClassName('required-entry');
+
             $('<?php echo $_code ?>_coc_number_wrapper').hide();
+            $('<?php echo $_code ?>_coc_number').removeClassName('required-entry');
         }
     };
 
