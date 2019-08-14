@@ -22,11 +22,17 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
      * Availability options
      */
     protected $_isGateway                   = true;
+    
     protected $_canOrder                    = true;
+    
     protected $_canAuthorize                = true;
+    
     protected $_canCapture                  = true;
     protected $_canCapturePartial           = false;
-    protected $_canRefundInvoicePartial     = false;
+    
+    protected $_canRefund                   = true;
+    protected $_canRefundInvoicePartial     = true;
+    
     protected $_canVoid                     = false;
 
     /**
@@ -75,7 +81,7 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
     public function authorize(Varien_Object $payment, $amount) {
 
         if ($amount <= 0) {
-            Mage::throwException(Mage::helper('capayable')->__('Invalid amount for authorize.'));
+            Mage::throwException(Mage::helper('capayable')->__('The amount due must be greater than 0.'));
         }
 
         // Convert amount to cents
@@ -85,8 +91,13 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
         $capayableCustomer = Mage::getModel('capayable/customer')->loadByEmail($_order->getCustomerEmail());
 
         // Throw exception if capayable can't provide customer credit
-        if(!$this->checkCredit($capayableCustomer, $amount)) {
-            throw new Mage_Payment_Model_Info_Exception(Mage::helper('capayable')->__("Can't authorize capayable payment."));
+        $result = $this->checkCredit($capayableCustomer, $amount);
+        if(!$result->getIsAccepted()) {
+            throw new Mage_Payment_Model_Info_Exception(
+                Mage::helper('capayable')->__('The payment was refused by Capayable') . ": " .
+                Mage::helper('capayable')->__(Tritac_CapayableApiClient_Enums_RefuseReason::toString( $result->getRefuseReason() ) ) . " " .
+                Mage::helper('capayable')->__('For additional information contact %s on %s .', $result->getRefuseContactName(), $result->getRefuseContactPhoneNumber())
+            );
         }
 
         return $this;
@@ -137,14 +148,16 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
                 ->setStreet($data->getStreet())
                 ->setHouseNumber((int) $data->getHouseNumber())
                 ->setHouseSuffix($data->getHouseSuffix())
-                ->setPostcode($address->getPostcode())
-                ->setCity($address->getCity())
+                ->setPostcode($data->getPostcode())
+                ->setCity($data->getCity())
                 ->setCountryId($address->getCountryId())
                 ->setTelephone($address->getTelephone())
                 ->setFax($address->getFax())
                 ->setIsCorporation($data->getIsCorporation())
+                ->setIsSoleProprietor($data->getIsSoleProprietor())
                 ->setCorporationName($data->getCorporationName())
                 ->setCocNumber($data->getCocNumber());
+                
         } else {
             $capayableCustomer->addData($data->getData());
         }
@@ -189,6 +202,7 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
             $gender = Tritac_CapayableApiClient_Enums_Gender::FEMALE;
         }
         $req->setGender($gender);
+
         $req->setBirthDate($_customer->getCustomerDob());
         $req->setStreetName($_customer->getStreet());
         $req->setHouseNumber($_customer->getHouseNumber());
@@ -199,22 +213,33 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
         $req->setPhoneNumber($_customer->getTelephone());
         $req->setFaxNumber($_customer->getFax());
         $req->setEmailAddress($_customer->getCustomerEmail());
-        $req->setIsCorporation((bool) $_customer->getIsCorporation());
-        $req->setCocNumber($_customer->getCocNumber());
+
+
+        $req->setIsCorporation((bool)$_customer->getIsCorporation());
         $req->setCorporationName($_customer->getCorporationName());
+        $req->setCocNumber($_customer->getCocNumber());
+
+        // Set to true in case of a small business / freelancer / independent contractor etc (zzp/eenmanszaak)
+        $req->setIsSoleProprietor((bool)$_customer->getIsSoleProprietor());
+
         $req->setIsFinal($isFinal);
         $req->setClaimAmount($amount);
 
         $result = $this->_client->doCreditCheck($req);
+        //Mage::log('CreditCheck: ' . ($result->getIsAccepted() ? 'ACCEPTED' : 'REJECTED: (' . Tritac_CapayableApiClient_Enums_RefuseReason::toString($result->getRefuseReason()) . ')' ) . "\r\n<br />");
 
+	return $result;
+	
         /**
          * If request is final return result array which contain transaction id.
          */
+        /*
         if($isFinal) {
             return $result;
         }
 
         return $result->getIsAccepted();
+        */
     }
 
     /**
@@ -225,16 +250,48 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
      */
     public function processApiInvoice($invoice)
     {
+	$order_id = $invoice->getOrder()->getIncrementId();
+	$sender_email = Mage::getStoreConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_IDENTITY);
+    
         // Initialize new api invoice
         $apiInvoice = new Tritac_CapayableApiClient_Models_Invoice();
         // Set required information
         $apiInvoice->setTransactionNumber($invoice->getTransactionId());
         $apiInvoice->setInvoiceNumber($invoice->getId());
         $apiInvoice->setInvoiceAmount($this->getHelper()->convertToCents($invoice->getGrandTotal()));
-        $apiInvoice->setInvoiceDescription(Mage::helper('capayable')->__('Order').' '.$invoice->getOrder()->getIncrementId());
+        $apiInvoice->setInvoiceDescription(Mage::helper('capayable')->__('Order').' '.$order_id);
+        
+        $apiInvoice->setInvoiceByEmail($sender_email, "Order #{$order_id}");
+        
         // Register new invoice with Capayable
         $isAccepted = $this->_client->registerInvoice($apiInvoice);
+        
 
         return $isAccepted;
     }
+    
+	//before refund
+	/*
+	public function processBeforeRefund($invoice, $payment)
+	{
+	}
+	*/
+	
+	//refund api
+	public function refund(Varien_Object $payment, $amount)
+    {
+        $transaction_number = $payment->getLastTransId();
+        $return_number = $payment->getOrder()->getIncrementId();
+
+        $apiReturn = new Tritac_CapayableApiClient_Models_InvoiceCreditRequest($transaction_number, $return_number, $amount);
+        $isAccepted = $this->_client->creditInvoice($apiReturn);
+        return $this;
+    }
+	
+	//after refund
+	/*
+	public function processCreditmemo($creditmemo, $payment)
+	{
+	}
+	*/
 }

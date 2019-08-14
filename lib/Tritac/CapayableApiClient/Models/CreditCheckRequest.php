@@ -15,8 +15,12 @@ class Tritac_CapayableApiClient_Models_CreditCheckRequest extends Tritac_Capayab
     protected $faxNumber;
     protected $emailAddress;
     protected $isCorporation;
+
+		// For corporations
     protected $corporationName;
     protected $cocNumber;
+		protected $isSoleProprietor;
+
     protected $isFinal;
     protected $claimAmount;
 
@@ -38,6 +42,7 @@ class Tritac_CapayableApiClient_Models_CreditCheckRequest extends Tritac_Capayab
         $this->isCorporation = false;
         $this->corporationName = '';
         $this->cocNumber = '';
+			$this->isSoleProprietor = false;
         $this->isFinal = false;
         $this->claimAmount = 0;
     }
@@ -179,6 +184,16 @@ class Tritac_CapayableApiClient_Models_CreditCheckRequest extends Tritac_Capayab
 
         $this->isCorporation = $isCorporation;
     }
+
+		function getIsSoleProprietor() { return $this->isSoleProprietor; }
+		function setIsSoleProprietor($isSoleProprietor) {
+
+			if(!is_bool($isSoleProprietor)){
+				throw new Exception('Is sole proprietor must be a boolean');
+			}
+
+			$this->isSoleProprietor = $isSoleProprietor;
+		}
 
     function getEmailAddress() { return $this->emailAddress; }
     function setEmailAddress($emailAddress) {

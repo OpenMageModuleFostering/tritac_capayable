@@ -1,2 +1,18 @@
 <?php
 echo $this->getMethod()->getTitle();
+?>
+
+<?php
+if(Mage::registry('invoice_number')) {
+    $invoice_number = Mage::registry('invoice_number');
+    Mage::unregister('invoice_number');
+?>
+<br>
+Please transfer the amount due to:<br>
+<strong>Stichting Beheer Gelden Capayable</strong><br>
+<strong>IBAN</strong> NL42INGB0006528043<br>
+<br>
+Use the following number as<br>
+the payment reference: <?php echo $invoice_number; ?><br>
+
+<?php } ?>

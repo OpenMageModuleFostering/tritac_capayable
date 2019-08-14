@@ -20,8 +20,10 @@ class Tritac_CapayableApiClient_Client {
     const VERSION_PATH 		= '/v1';
     const CERTIFICATE_PATH	= 'AddTrustExternalCARoot.crt';
 
-    const CREDITCHECK_PATH	= '/creditcheck';
-    const INVOICE_PATH		= '/invoice';
+    const CREDITCHECK_PATH          = '/creditcheck';
+    const INVOICE_PATH        = '/invoice';
+    const INVOICECREDIT_PATH        = '/invoicecredit';
+    const REGISTRATIONCHECK_PATH    = '/registrationcheck';
 
     public function __construct($apiKey, $apiSecret, $env = null)
     {
@@ -40,29 +42,65 @@ class Tritac_CapayableApiClient_Client {
     }
 
     public function doCreditCheck(Tritac_CapayableApiClient_Models_CreditCheckRequest $request)
-    {
-        $args = $request->toArray();
-        if(!$request->getIsCorporation()){
-            unset($args['CocNumber']);
-            unset($args['CorporationName']);
-        }
+	{
+		$args = $request->toArray();
+		if(!$request->getIsCorporation()){
+			unset($args['CocNumber']);
+			unset($args['CorporationName']);
+			unset($args['IsSoleProprietor']);
+		}
 
-        $path = self::VERSION_PATH . self::CREDITCHECK_PATH;
+		$path = self::VERSION_PATH . self::CREDITCHECK_PATH;
 
-        $response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)));
+		$response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)), true);
 
-        return new Tritac_CapayableApiClient_Models_CreditCheckResponse($response->IsAccepted, $response->TransactionNumber);
-    }
+		$creditCheckResponse = new Tritac_CapayableApiClient_Models_CreditCheckResponse();
 
-    public function registerInvoice(Tritac_CapayableApiClient_Models_Invoice $invoice)
-    {
-        $args = $invoice->toArray();
-        $path = self::VERSION_PATH . self::INVOICE_PATH;
+		if( $response['IsAccepted'] ){
+			$creditCheckResponse->setAccepted($response['TransactionNumber']);
+		}else{
+			$creditCheckResponse->setRefused($response['RefuseReason'], $response['RefuseContactName'], $response['RefuseContactPhoneNumber']);
+		}
 
-        $response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)));
+		return $creditCheckResponse;
+	}
 
-        return $response->IsAccepted;
-    }
+	public function doRegistrationCheck(Tritac_CapayableApiClient_Models_RegistrationCheckRequest $request)
+	{
+		$args = $request->toArray();
+
+		$path = self::VERSION_PATH . self::REGISTRATIONCHECK_PATH;
+
+		$response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)), true);
+
+		$creditCheckResponse = new Tritac_CapayableApiClient_Models_RegistrationCheckResponse($response['IsAccepted'], $response['HouseNumber'],
+			$response['HouseNumberSuffix'], $response['ZipCode'], $response['City'], $response['CountryCode'],
+			$response['PhoneNumber'], $response['CorporationName'], $response['CoCNumber'], $response['StreetName']);
+
+		return $creditCheckResponse;
+	}
+	
+	public function registerInvoice(Tritac_CapayableApiClient_Models_Invoice $invoice)
+	{
+		$args = $invoice->toArray();
+		$path = self::VERSION_PATH . self::INVOICE_PATH;
+
+		$response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)), true);
+
+		return $response['IsAccepted'];
+	}
+
+    public function creditInvoice(Tritac_CapayableApiClient_Models_InvoiceCreditRequest $request)
+	{
+		$args = $request->toArray();
+		$path = self::VERSION_PATH . self::INVOICECREDIT_PATH;
+
+		$response = json_decode($this->makeRequest(Tritac_CapayableApiClient_Enums_HttpMethod::GET, $path, $this->buildQueryString($args, $path)), true);
+
+		$invoiceCreditResponse = new Tritac_CapayableApiClient_Models_InvoiceCreditResponse($response['Result'], $response['AmountCredited'], $response['AmountNotCredited']);
+
+		return $invoiceCreditResponse;
+	}
 
     /* Private methods */
 

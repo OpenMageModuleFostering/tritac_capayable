@@ -60,6 +60,11 @@ $table = $installer->getConnection()
     ), 'Is Corporation')
     ->addColumn('corporation_name', Varien_Db_Ddl_Table::TYPE_TEXT, 150, array(
     ), 'Corporation Name')
+    ->addColumn('is_sole', Varien_Db_Ddl_Table::TYPE_SMALLINT, null, array(
+        'unsigned'  => true,
+        'nullable'  => false,
+        'default'   => '0',
+    ), 'Is Sole Proprietor')
     ->addColumn('coc_number', Varien_Db_Ddl_Table::TYPE_TEXT, 20, array(
     ), 'Chamber of Commerce number')
     ->addIndex($installer->getIdxName('capayable/customer', array('customer_id')),

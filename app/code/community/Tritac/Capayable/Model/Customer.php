@@ -87,7 +87,7 @@ class Tritac_Capayable_Model_Customer extends Mage_Core_Model_Abstract {
         }
 
         if (!Zend_Validate::is($this->getTelephone(), 'NotEmpty')) {
-            $errors[] = Mage::helper('capayable')->__('the telephone number is required.');
+            $errors[] = Mage::helper('capayable')->__('The telephone number is required.');
         }
 
         if (empty($errors)) {

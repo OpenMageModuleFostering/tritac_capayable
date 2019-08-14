@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Tritac_Capayable>
-            <version>1.0.0</version>
+            <version>2.1.0</version>
         </Tritac_Capayable>
     </modules>
 
@@ -101,8 +101,16 @@
             </modules>
         </translate>
     </adminhtml>
-
     <frontend>
+    	<routers>
+    		<capayable>
+    			<use>standard</use>
+    			<args>
+    				<module>Tritac_Capayable</module>
+    				<frontName>capayable</frontName>
+    			</args>    		
+    		</capayable>
+    	</routers>
         <translate>
             <modules>
                 <Tritac_Capayable>

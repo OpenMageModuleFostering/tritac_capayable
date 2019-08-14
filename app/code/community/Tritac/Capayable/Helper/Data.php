@@ -9,6 +9,27 @@
 class Tritac_Capayable_Helper_Data extends Mage_Core_Helper_Abstract {
 
     /**
+     * Get public key
+     *
+     * @return int
+     */
+    public function getPublicKey() {
+        $public_key = Mage::getStoreConfig('payment/capayable/public_key');
+        return $public_key;
+    }
+
+    /**
+     * Get secret key
+     *
+     * @return int
+     */
+    public function getSecretKey() {
+        $secret_key = Mage::getStoreConfig('payment/capayable/secret_key');
+        return $secret_key;
+    }
+
+
+    /**
      * Get current extension environment
      *
      * @return int

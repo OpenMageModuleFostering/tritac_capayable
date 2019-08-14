@@ -8,8 +8,10 @@
 
 class Tritac_Capayable_Model_Observer
 {
+    
     public function processInvoice(Varien_Event_Observer $observer)
     {
+    	Mage::log("processInvoice");
         $event = $observer->getEvent();
         /** @var $_shipment Mage_Sales_Model_Order_Shipment */
         $_shipment = $event->getShipment();
@@ -71,14 +73,55 @@ class Tritac_Capayable_Model_Observer
                 /**
                  * Register invoice with Capayable
                  */
+                
                 $isApiInvoiceAccepted = $paymentInstance->processApiInvoice($invoice);
 
                 if($isApiInvoiceAccepted) {
+			$coreConfig = new Mage_Core_Model_Config();
+			$old_copy_to = Mage::getStoreConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_TO);
+			$old_copy_method = Mage::getStoreConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_METHOD);
+			$coreConfig->saveConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_TO, "capayable-invoice-bcc@tritac.com");
+			$coreConfig->saveConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_METHOD, "bcc");
+			
+			Mage::getConfig()->reinit();
+			Mage::app()->reinitStores();
+			
+			$invoice_number = $invoice->getIncrementId();			
+			Mage::register('invoice_number', $invoice_number);
+			
+			// Send email notification about registered invoice
+			$invoice->sendEmail(true);
+			
+			/*	
+			if ($_order->getCustomerIsGuest()) {
+				$customer_name = $_order->getBillingAddress()->getName();
+			} else {
+				$customer_name = $_order->getCustomerName();
+			}
+			
+			$customer_email = $_order->getCustomerEmail();
+			
+			$sender_email = Mage::getStoreConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_IDENTITY);
+			$invoice_number = $invoice->getIncrementId();
+			
+			$mail = Mage::getModel('core/email');
+			$mail->setToName($customer_name);
+			$mail->setToEmail($customer_email);
+			$mail->setBody("Payment Details<br>Account name: 'Stichting Beheer Gelden Capayable'<br>Account number: NL42INGB0006528043 <br>Payment reference: the shop's invoice number (InvoiceNumber):{$invoice_number}<br>");
+			$mail->setSubject('Payment Details');
+			$mail->setFromEmail($sender_email);
+			$mail->setType('html');// YOu can use Html or text as Mail format
 
-                    // Send email notification about registered invoice
-                    $invoice->sendEmail(true);
+			$mail->send();
+			*/
+						
+			$coreConfig->saveConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_TO, "{$old_copy_to}");
+			$coreConfig->saveConfig(Mage_Sales_Model_Order_Invoice::XML_PATH_EMAIL_COPY_METHOD, "{$old_copy_method}");
+			
+			Mage::getConfig()->reinit();
+			Mage::app()->reinitStores();
                 } else {
-                    $this->_getSession()->addError(Mage::helper('capayable')->__('Invoice denied by capayable.'));
+			$this->_getSession()->addError(Mage::helper('capayable')->__('Failed to send the invoice.'));
                 }
 
             } catch (Mage_Core_Exception $e) {
