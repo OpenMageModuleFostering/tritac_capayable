@@ -91,7 +91,7 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
         $capayableCustomer = Mage::getModel('capayable/customer')->loadByEmail($_order->getCustomerEmail());
 
         // Throw exception if capayable can't provide customer credit
-        $result = $this->checkCredit($capayableCustomer, $amount);
+        $result = $this->checkCredit($capayableCustomer, $amount, true);
         if(!$result->getIsAccepted()) {
             throw new Mage_Payment_Model_Info_Exception(
                 Mage::helper('capayable')->__('The payment was refused by Capayable') . ": " .
@@ -100,6 +100,9 @@ class Tritac_Capayable_Model_Payment extends Mage_Payment_Model_Method_Abstract
             );
         }
 
+        // Set magento transaction id which returned from capayable
+        $payment->setLastTransId($result->getTransactionNumber());
+        
         return $this;
     }
 

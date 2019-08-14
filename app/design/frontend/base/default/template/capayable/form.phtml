@@ -25,18 +25,61 @@
  */
 ?>
 <?php
-$_code = $this->getMethodCode();
-$_quote = $this->getQuote();
-$_customer = $this->getCustomer();
-$isLoggedIn = Mage::helper('customer')->isLoggedIn();
-?>
-<?php
-// var_dump($_quote->getData());
+
+    $_code = $this->getMethodCode();
+    $_quote = $this->getQuote();
+    $_customer = $this->getCustomer();
+
+    $isLoggedIn = Mage::helper('customer')->isLoggedIn();
+    $cocNumberCheck = Mage::getStoreConfig('payment/capayable/chamber_of_commerce_check');
+    $billingAddress = $_quote->getBillingAddress();
+
+    $firstname = $billingAddress->getData("firstname");
+    $names = explode(" ", $firstname);
+    $initials = "";
+
+    foreach ($names as $name) {
+      $initials .= $name[0] . ". ";
+    }
+    //if($_customer->getCustomerMiddlename() && $isLoggedIn)
+    //  $initials = $_customer->getCustomerMiddlename();
+
+
+    $postcode = $billingAddress->getData("postcode");
+    if($_customer->getPostalCode() && $isLoggedIn) {
+        $postcode = $_customer->getPostalCode();
+    }
+        
+    $city = $billingAddress->getData("city");
+    if($_customer->getCity() && $isLoggedIn) {
+        $city = $_customer->getCity();
+    }
+
 ?>
 
 <script type="text/javascript">
 //<![CDATA[
-var SoleChecked<?php echo $_code ?> = function() {
+
+// Prototype-- http://michaelxavier.net/posts/2011-04-02-Document-Ready-in-Prototype.html
+(function() {
+    var init = function(){
+
+        Event.observe($('<?php echo $_code ?>_is_corporation'), 'change', toggleCorporationForm);
+        toggleCorporationForm();
+
+        <?php if ($cocNumberCheck): ?>
+            Event.observe($('<?php echo $_code?>_coc_number'), 'change', submitCocRequest);
+        <?php endif ?>
+    };
+    
+    if (document.loaded) {
+        init();
+    } else {
+        document.observe('dom:loaded', init);
+    }
+})(); 
+
+function toggleCorporationForm() {
     var elm = $('<?php echo $_code ?>_is_corporation');
     if (elm.value == 1) {
         $('<?php echo $_code ?>_is_sole_wrapper').show();
@@ -49,174 +92,129 @@ var SoleChecked<?php echo $_code ?> = function() {
     }
 };
 
-Event.observe($('<?php echo $_code ?>_is_corporation'), 'change', SoleChecked<?php echo $_code ?>);
-SoleChecked<?php echo $_code ?>();
-//]]>
-</script> 
-
-<script>
-function SubmitRequest()
+function submitCocRequest()
 {
-	var elm = $('<?php echo $_code ?>_coc_number');
-	console.log(666);
 	new Ajax.Request("<?php echo Mage::getBaseUrl(); ?>capayable/ajax/registrationcheck", {
 		method: 'get',
-		parameters: {coc_number: elm.value},
-		onSuccess: successFunc,
-		onFailure:  failureFunc
+		parameters: {coc_number: $('<?php echo $_code ?>_coc_number').value},
+		onSuccess: cocRequestOnSuccess,
+		onFailure:  cocRequestOnFailure
 	});
 }
 
-function successFunc(response){
+function cocRequestOnSuccess(response){
 	var json = response.responseText.evalJSON();
 	if (json.isAccepted) {
-		console.log(555);
-		console.log(json);
 		
-		var elm_corporation_name = $('<?php echo $_code ?>_corporation_name');
-		var elm_street = $('<?php echo $_code ?>_street');
-		var elm_house_number = $('<?php echo $_code ?>_house_number');
-		var elm_house_suffix = $('<?php echo $_code ?>_house_suffix');
-		var elm_postcode = $('<?php echo $_code ?>_postcode');
-		var elm_city = $('<?php echo $_code ?>_city');
-		
-		elm_corporation_name.value = json.corporationName;
-		elm_street.value = json.streetName;
-		elm_house_number.value = json.houseNumber;
-		elm_house_suffix.value = json.houseNumberSuffix;
-		elm_postcode.value = json.zipCode;
-		elm_city.value = json.city;			
+		$('<?php echo $_code ?>_corporation_name').value = json.corporationName;
+		$('<?php echo $_code ?>_street').value = json.streetName;
+		$('<?php echo $_code ?>_house_number').value = json.houseNumber;
+		$('<?php echo $_code ?>_house_suffix').value = json.houseNumberSuffix;
+		$('<?php echo $_code ?>_postcode').value = json.zipCode;
+		$('<?php echo $_code ?>_city').value = json.city;
+	
 	} else {
-		failureFunc(response);
+		cocRequestOnFailure(response);
 	}
 }
 
-function failureFunc(response){
-	var elm_corporation_name = $('<?php echo $_code ?>_corporation_name');
-	var elm_street = $('<?php echo $_code ?>_street');
-	var elm_house_number = $('<?php echo $_code ?>_house_number');
-	var elm_house_suffix = $('<?php echo $_code ?>_house_suffix');
-	var elm_postcode = $('<?php echo $_code ?>_postcode');
-	var elm_city = $('<?php echo $_code ?>_city');
-	
-	elm_corporation_name.value = "";
-	elm_street.value = "";
-	elm_house_number.value = "";
-	elm_house_suffix.value = "";
-	elm_postcode.value = "";
-	elm_city.value = "";
+function cocRequestOnFailure(response){
+	$('<?php echo $_code ?>_corporation_name').value = '';
+    $('<?php echo $_code ?>_street').value = '';
+    $('<?php echo $_code ?>_house_number').value = '';
+    $('<?php echo $_code ?>_house_suffix').value = '';
+    $('<?php echo $_code ?>_postcode').value = '';
+    $('<?php echo $_code ?>_city').value = '';
 }
-<?php
-    $coc_number_check = Mage::getStoreConfig('payment/capayable/chamber_of_commerce_check');
-    if ($coc_number_check):
-?>
-    Event.observe($('<?php echo $_code?>_coc_number'), 'change', SubmitRequest);
-<?php endif ?>
+
+
+//]]>
 </script>
 <?php
 
-$billingAddress = $_quote->getBillingAddress();
-
-$firstname = $billingAddress->getData("firstname");
-$names = explode(" ", $firstname);
-$initials = "";
-foreach ($names as $name) {
-  $initials .= $name[0] . ". ";
-}
-//if($_customer->getCustomerMiddlename() && $isLoggedIn)
-//	$initials = $_customer->getCustomerMiddlename();
-
-
-$postcode = $billingAddress->getData("postcode");
-if($_customer->getPostalCode() && $isLoggedIn)
-	$postcode = $_customer->getPostalCode();
-	
-$city = $billingAddress->getData("city");
-if($_customer->getCity() && $isLoggedIn)
-	$city = $_customer->getCity();
 ?>
 <ul class="form-list" id="payment_form_<?php echo $_code ?>" style="display:none;">
-    <?php if(1 || !$isLoggedIn): ?>
-        <?php if(!$_quote->getCustomerMiddlename()): ?>
-            <li>
-                <label for="<?php echo $_code?>_middlename" class="required"><em>*</em><?php echo $this->__('Initials')?></label>
-                <div class="input-box">
-                    <input type="text" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
+
+
+    <li>
+        <label for="<?php echo $_code?>_middlename" class="required"><em>*</em><?php echo $this->__('Initials')?></label>
+        <div class="input-box">
+            <input type="text" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
+        </div>
+    </li>
+
+
+    <?php if(!$_quote->getCustomerDob()): ?>
+        <li>
+            <label for="<?php echo $_code?>_month" class="required"><em>*</em><?php echo $this->__('Date of Birth') ?></label>
+            <div class="input-box capayable-customer-dob customer-dob">
+                <?php
+                $_dob = $this->getLayout()->createBlock('customer/widget_dob');
+                $_dob->setDateInput('d',
+                    '<div class="dob-day">
+                         <input type="text" id="day" name="payment[day]" value="' . $_dob->getDay() . '" title="' . $this->__('Day') . '" class="input-text validate-custom" />
+                         <label for="' . $_code . '_day">' . $this->__('DD') . '</label>
+                     </div>'
+                );
+
+                $_dob->setDateInput('m',
+                    '<div class="dob-month">
+                         <input type="text" id="' . $_code . '_month" name="payment[month]" value="' . $_dob->getMonth() . '" title="' . $this->__('Month')  . '" class="input-text validate-custom" />
+                         <label for="' . $_code . '_month">' . $this->__('MM')  . '</label>
+                    </div>'
+                );
+
+                $_dob->setDateInput('y',
+                    '<div class="dob-year">
+                         <input type="text" id="' . $_code . '_year" name="payment[year]" value="' . $_dob->getYear() . '" title="' . $this->__('Year')  . '" class="input-text validate-custom" />
+                         <label for="' . $_code . '_year">' . $this->__('YYYY')  . '</label>
+                    </div>'
+                );
+
+                //echo $_dob->getSortedDateInputs();
+                ?>
+                <?php
+                	echo 
+    			'<div class="dob-day">
+    				<input type="text" id="day" name="payment[day]" value="' . $_dob->getDay() . '" title="' . $this->__('Day') . '" class="input-text validate-custom" />
+    				<label for="' . $_code . '_day">' . $this->__('DD') . '</label>
+    			</div>',
+    			'<div class="dob-month">
+    				<input type="text" id="' . $_code . '_month" name="payment[month]" value="' . $_dob->getMonth() . '" title="' . $this->__('Month')  . '" class="input-text validate-custom" />
+    				<label for="' . $_code . '_month">' . $this->__('MM')  . '</label>
+    			</div>',
+    			'<div class="dob-year">
+    				<input type="text" id="' . $_code . '_year" name="payment[year]" value="' . $_dob->getYear() . '" title="' . $this->__('Year')  . '" class="input-text validate-custom" />
+    				<label for="' . $_code . '_year">' . $this->__('YYYY')  . '</label>
+    			</div>';
+                ?>
+                <div class="dob-full" style="display:none;">
+                    <input type="hidden" id="<?php echo $_code ?>_dob" name="payment[customer_dob]" />
                 </div>
-            </li>
-        <?php endif ?>
-        <?php if(!$_quote->getCustomerDob()): ?>
-            <li>
-                <label for="<?php echo $_code?>_month" class="required"><em>*</em><?php echo $this->__('Date of Birth') ?></label>
-                <div class="input-box capayable-customer-dob customer-dob">
+
+                <div class="validation-advice" style="display:none;"></div>
+            </div>
+            <script type="text/javascript">
+                //<![CDATA[
+                var capayable_customer_dob = new Varien.DOB('.capayable-customer-dob', true, '<?php echo $_dob->getDateFormat() ?>');
+                //]]>
+            </script>
+        </li>
+    <?php endif ?>
+    <?php if(!$_quote->getCustomerGender()): ?>
+        <li>
+            <label for="<?php echo $_code?>_gender" class="required"><em>*</em><?php echo $this->__('Gender') ?></label>
+            <div class="input-box">
+                <select id="<?php echo $_code?>_gender" name="payment[customer_gender]" title="<?php echo $this->__('Gender') ?>" class="validate-select">
                     <?php
-                    $_dob = $this->getLayout()->createBlock('customer/widget_dob');
-                    $_dob->setDateInput('d',
-                        '<div class="dob-day">
-                             <input type="text" id="day" name="payment[day]" value="' . $_dob->getDay() . '" title="' . $this->__('Day') . '" class="input-text validate-custom" />
-                             <label for="' . $_code . '_day">' . $this->__('DD') . '</label>
-                         </div>'
-                    );
-
-                    $_dob->setDateInput('m',
-                        '<div class="dob-month">
-                             <input type="text" id="' . $_code . '_month" name="payment[month]" value="' . $_dob->getMonth() . '" title="' . $this->__('Month')  . '" class="input-text validate-custom" />
-                             <label for="' . $_code . '_month">' . $this->__('MM')  . '</label>
-                        </div>'
-                    );
-
-                    $_dob->setDateInput('y',
-                        '<div class="dob-year">
-                             <input type="text" id="' . $_code . '_year" name="payment[year]" value="' . $_dob->getYear() . '" title="' . $this->__('Year')  . '" class="input-text validate-custom" />
-                             <label for="' . $_code . '_year">' . $this->__('YYYY')  . '</label>
-                        </div>'
-                    );
-
-                    //echo $_dob->getSortedDateInputs();
+                        $options = Mage::getResourceSingleton('customer/customer')->getAttribute('gender')->getSource()->getAllOptions();
                     ?>
-                    <?php
-                    	echo 
-			'<div class="dob-day">
-				<input type="text" id="day" name="payment[day]" value="' . $_dob->getDay() . '" title="' . $this->__('Day') . '" class="input-text validate-custom" />
-				<label for="' . $_code . '_day">' . $this->__('DD') . '</label>
-			</div>',
-			'<div class="dob-month">
-				<input type="text" id="' . $_code . '_month" name="payment[month]" value="' . $_dob->getMonth() . '" title="' . $this->__('Month')  . '" class="input-text validate-custom" />
-				<label for="' . $_code . '_month">' . $this->__('MM')  . '</label>
-			</div>',
-			'<div class="dob-year">
-				<input type="text" id="' . $_code . '_year" name="payment[year]" value="' . $_dob->getYear() . '" title="' . $this->__('Year')  . '" class="input-text validate-custom" />
-				<label for="' . $_code . '_year">' . $this->__('YYYY')  . '</label>
-			</div>';
-                    ?>
-                    <div class="dob-full" style="display:none;">
-                        <input type="hidden" id="<?php echo $_code ?>_dob" name="payment[customer_dob]" />
-                    </div>
-
-                    <div class="validation-advice" style="display:none;"></div>
-                </div>
-                <script type="text/javascript">
-                    //<![CDATA[
-                    var capayable_customer_dob = new Varien.DOB('.capayable-customer-dob', true, '<?php echo $_dob->getDateFormat() ?>');
-                    //]]>
-                </script>
-            </li>
-        <?php endif ?>
-        <?php if(!$_quote->getCustomerGender()): ?>
-            <li>
-                <label for="<?php echo $_code?>_gender" class="required"><em>*</em><?php echo $this->__('Gender') ?></label>
-                <div class="input-box">
-                    <select id="<?php echo $_code?>_gender" name="payment[customer_gender]" title="<?php echo $this->__('Gender') ?>" class="validate-select">
-                        <?php
-                            $options = Mage::getResourceSingleton('customer/customer')->getAttribute('gender')->getSource()->getAllOptions();
-                        ?>
-                        <?php foreach ($options as $option):?>
-                            <option value="<?php echo $option['value'] ?>"><?php echo $option['label'] ?></option>
-                        <?php endforeach;?>
-                    </select>
-                </div>
-            </li>
-        <?php endif ?>
+                    <?php foreach ($options as $option):?>
+                        <option value="<?php echo $option['value'] ?>"><?php echo $option['label'] ?></option>
+                    <?php endforeach;?>
+                </select>
+            </div>
+        </li>
     <?php endif ?>
 
     <li>
@@ -287,3 +285,4 @@ if($_customer->getCity() && $isLoggedIn)
     </li>
     
 </ul>
+

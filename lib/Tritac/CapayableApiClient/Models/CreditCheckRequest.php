@@ -42,7 +42,7 @@ class Tritac_CapayableApiClient_Models_CreditCheckRequest extends Tritac_Capayab
         $this->isCorporation = false;
         $this->corporationName = '';
         $this->cocNumber = '';
-			$this->isSoleProprietor = false;
+		$this->isSoleProprietor = false;
         $this->isFinal = false;
         $this->claimAmount = 0;
     }
