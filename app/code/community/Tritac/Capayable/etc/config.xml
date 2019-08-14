@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @category    Tritac
+ * @package     Tritac_Capayable
+ * @copyright   Copyright (c) 2014 Tritac (http://www.tritac.com)
+ * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ */
+-->
+<config>
+    <modules>
+        <Tritac_Capayable>
+            <version>1.0.0</version>
+        </Tritac_Capayable>
+    </modules>
+
+    <global>
+        <blocks>
+            <capayable>
+                <class>Tritac_Capayable_Block</class>
+            </capayable>
+        </blocks>
+        <models>
+            <capayable>
+                <class>Tritac_Capayable_Model</class>
+                <resourceModel>capayable_resource</resourceModel>
+            </capayable>
+            <capayable_resource>
+                <class>Tritac_Capayable_Model_Resource</class>
+                <entities>
+                    <customer>
+                        <table>capayable_customer</table>
+                    </customer>
+                </entities>
+            </capayable_resource>
+        </models>
+        <helpers>
+            <capayable>
+                <class>Tritac_Capayable_Helper</class>
+            </capayable>
+        </helpers>
+        <resources>
+            <capayable_setup>
+                <setup>
+                    <module>Tritac_Capayable</module>
+                    <class>Tritac_Capayable_Model_Resource_Setup</class>
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </capayable_setup>
+            <capayable_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </capayable_read>
+            <capayable_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </capayable_write>
+        </resources>
+
+        <fieldsets>
+            <sales_convert_quote_payment>
+                <test2>
+                    <to_order_payment>*</to_order_payment>
+                </test2>
+            </sales_convert_quote_payment>
+        </fieldsets>
+    </global>
+
+    <adminhtml>
+        <events>
+            <sales_order_shipment_save_after>
+                <observers>
+                    <process_invoice_after_shipment>
+                        <type>singleton</type>
+                        <class>capayable/observer</class>
+                        <method>processInvoice</method>
+                    </process_invoice_after_shipment>
+                </observers>
+            </sales_order_shipment_save_after>
+            <sales_order_load_after>
+                <observers>
+                    <disable_order_invoice>
+                        <type>singleton</type>
+                        <class>capayable/observer</class>
+                        <method>disableOrderInvoice</method>
+                    </disable_order_invoice>
+                </observers>
+            </sales_order_load_after>
+        </events>
+        <translate>
+            <modules>
+                <Tritac_Capayable>
+                    <files>
+                        <default>Tritac_Capayable.csv</default>
+                    </files>
+                </Tritac_Capayable>
+            </modules>
+        </translate>
+    </adminhtml>
+
+    <frontend>
+        <translate>
+            <modules>
+                <Tritac_Capayable>
+                    <files>
+                        <default>Tritac_Capayable.csv</default>
+                    </files>
+                </Tritac_Capayable>
+            </modules>
+        </translate>
+    </frontend>
+
+    <default>
+        <payment>
+            <capayable>
+                <active>1</active>
+                <model>capayable/payment</model>
+                <title>Capayable</title>
+                <email_customer>1</email_customer>
+                <payment_action>authorize</payment_action>
+                <sort_order>1</sort_order>
+            </capayable>
+        </payment>
+    </default>
+</config>

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @category    Tritac
+ * @package     Tritac_Capayable
+ * @copyright   Copyright (c) 2014 Tritac (http://www.tritac.com)
+ * @license     http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ */
+-->
+<config>
+    <modules>
+        <Tritac_Capayable>
+            <active>true</active>
+            <codePool>community</codePool>
+        </Tritac_Capayable>
+    </modules>
+</config>
