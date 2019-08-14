@@ -43,7 +43,7 @@
     }
     //if($_customer->getCustomerMiddlename() && $isLoggedIn)
     //  $initials = $_customer->getCustomerMiddlename();
-
+    $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout');
 
     $postcode = $billingAddress->getData("postcode");
     if($_customer->getPostalCode() && $isLoggedIn) {
@@ -56,85 +56,7 @@
     }
 
 ?>
-
-<script type="text/javascript">
-//<![CDATA[
-
-// Prototype-- http://michaelxavier.net/posts/2011-04-02-Document-Ready-in-Prototype.html
-(function() {
-    var init = function(){
-
-        Event.observe($('<?php echo $_code ?>_is_corporation'), 'change', toggleCorporationForm);
-        toggleCorporationForm();
-
-        <?php if ($cocNumberCheck): ?>
-            Event.observe($('<?php echo $_code?>_coc_number'), 'change', submitCocRequest);
-        <?php endif ?>
-    };
-    
-    if (document.loaded) {
-        init();
-    } else {
-        document.observe('dom:loaded', init);
-    }
-})(); 
-
-function toggleCorporationForm() {
-    var elm = $('<?php echo $_code ?>_is_corporation');
-    if (elm.value == 1) {
-        $('<?php echo $_code ?>_is_sole_wrapper').show();
-        $('<?php echo $_code ?>_corporation_name_wrapper').show();
-        $('<?php echo $_code ?>_coc_number_wrapper').show();
-    } else {
-        $('<?php echo $_code ?>_is_sole_wrapper').hide();
-        $('<?php echo $_code ?>_corporation_name_wrapper').hide();
-        $('<?php echo $_code ?>_coc_number_wrapper').hide();
-    }
-};
-
-function submitCocRequest()
-{
-	new Ajax.Request("<?php echo Mage::getBaseUrl(); ?>capayable/ajax/registrationcheck", {
-		method: 'get',
-		parameters: {coc_number: $('<?php echo $_code ?>_coc_number').value},
-		onSuccess: cocRequestOnSuccess,
-		onFailure:  cocRequestOnFailure
-	});
-}
-
-function cocRequestOnSuccess(response){
-	var json = response.responseText.evalJSON();
-	if (json.isAccepted) {
-		
-		$('<?php echo $_code ?>_corporation_name').value = json.corporationName;
-		$('<?php echo $_code ?>_street').value = json.streetName;
-		$('<?php echo $_code ?>_house_number').value = json.houseNumber;
-		$('<?php echo $_code ?>_house_suffix').value = json.houseNumberSuffix;
-		$('<?php echo $_code ?>_postcode').value = json.zipCode;
-		$('<?php echo $_code ?>_city').value = json.city;
-	
-	} else {
-		cocRequestOnFailure(response);
-	}
-}
-
-function cocRequestOnFailure(response){
-	$('<?php echo $_code ?>_corporation_name').value = '';
-    $('<?php echo $_code ?>_street').value = '';
-    $('<?php echo $_code ?>_house_number').value = '';
-    $('<?php echo $_code ?>_house_suffix').value = '';
-    $('<?php echo $_code ?>_postcode').value = '';
-    $('<?php echo $_code ?>_city').value = '';
-}
-
-
-//]]>
-</script>
-<?php
-
-?>
 <ul class="form-list" id="payment_form_<?php echo $_code ?>" style="display:none;">
-
 
     <li>
         <label for="<?php echo $_code?>_middlename" class="required"><em>*</em><?php echo $this->__('Initials')?></label>
@@ -286,3 +208,182 @@ function cocRequestOnFailure(response){
     
 </ul>
 
+<script type="text/javascript">
+//<![CDATA[
+/**
+ * Event.simulate(@element, eventName[, options]) -> Element
+ * 
+ * - @element: element to fire event on
+ * - eventName: name of event to fire (only MouseEvents and HTMLEvents interfaces are supported)
+ * - options: optional object to fine-tune event properties - pointerX, pointerY, ctrlKey, etc.
+ *
+ *    $('foo').simulate('click'); // => fires "click" event on an element with id=foo
+ *
+ **/
+(function(){
+  
+  var eventMatchers = {
+    'HTMLEvents': /^(?:load|unload|abort|error|select|change|submit|reset|focus|blur|resize|scroll)$/,
+    'MouseEvents': /^(?:click|mouse(?:down|up|over|move|out))$/
+  }
+  var defaultOptions = {
+    pointerX: 0,
+    pointerY: 0,
+    button: 0,
+    ctrlKey: false,
+    altKey: false,
+    shiftKey: false,
+    metaKey: false,
+    bubbles: true,
+    cancelable: true
+  }
+  
+  Event.simulate = function(element, eventName) {
+    var options = Object.extend(defaultOptions, arguments[2] || { });
+    var oEvent, eventType = null;
+    
+    element = $(element);
+    
+    for (var name in eventMatchers) {
+      if (eventMatchers[name].test(eventName)) { eventType = name; break; }
+    }
+
+    if (!eventType)
+      throw new SyntaxError('Only HTMLEvents and MouseEvents interfaces are supported');
+
+    if (document.createEvent) {
+      oEvent = document.createEvent(eventType);
+      if (eventType == 'HTMLEvents') {
+        oEvent.initEvent(eventName, options.bubbles, options.cancelable);
+      }
+      else {
+        oEvent.initMouseEvent(eventName, options.bubbles, options.cancelable, document.defaultView, 
+          options.button, options.pointerX, options.pointerY, options.pointerX, options.pointerY,
+          options.ctrlKey, options.altKey, options.shiftKey, options.metaKey, options.button, element);
+      }
+      element.dispatchEvent(oEvent);
+    }
+    else {
+      options.clientX = options.pointerX;
+      options.clientY = options.pointerY;
+      oEvent = Object.extend(document.createEventObject(), options);
+      element.fireEvent('on' + eventName, oEvent);
+    }
+    return element;
+  }
+  
+  Element.addMethods({ simulate: Event.simulate });
+})()
+//]]>
+</script>
+<script type="text/javascript">
+//<![CDATA[
+    // Prototype-- http://michaelxavier.net/posts/2011-04-02-Document-Ready-in-Prototype.html
+    (function() {
+        var init = function(){
+
+            Event.observe($('<?php echo $_code ?>_is_corporation'), 'change', toggleCorporationForm);
+            toggleCorporationForm();
+
+            <?php if ($cocNumberCheck): ?>
+                Event.observe($('<?php echo $_code?>_coc_number'), 'change', submitCocRequest);
+            <?php endif ?>
+
+            <?php if ($hasMageWorldOSC): ?>
+                listenAndApplyChanges('#billing\\:company', '#capayable_corporation_name');
+                listenAndApplyChanges('#billing\\:firstname', '#capayable_middlename');
+                listenAndApplyChanges('#billing\\:postcode', '#capayable_postcode');
+                listenAndApplyChanges('#billing\\:city', '#capayable_city');
+            <?php endif ?>
+        };
+        
+        if (document.loaded) {
+            init();
+        } else {
+            document.observe('dom:loaded', init);
+        }
+    })(); 
+
+    function listenAndApplyChanges(oneStepCheckoutSelector, capayableSelector) {
+        
+        // One step checkout uses jQuery under the alias $MW_Onestepcheckout.
+
+        var $oneStepCheckoutElement = $MW_Onestepcheckout(oneStepCheckoutSelector);
+        var $capayableElement = $MW_Onestepcheckout(capayableSelector);
+
+        $oneStepCheckoutElement.on('change', function() {
+
+            var val = $oneStepCheckoutElement.val();
+
+            if(capayableSelector == '#capayable_middlename' && val) {
+                names = val.split(' ');
+                val = '';
+                $MW_Onestepcheckout.each(names, function(index, name) {
+                    val += name.substring(0,1) + '. ';
+                });
+            }
+
+            if(capayableSelector == '#capayable_corporation_name') {
+                $MW_Onestepcheckout('#capayable_is_corporation').val(val ? 1 : 0);
+
+                // Trigger the prototype event
+                $('capayable_is_corporation').simulate('change');
+            }
+
+            $capayableElement.val(val);
+        });
+        $oneStepCheckoutElement.change();
+    }
+
+    function toggleCorporationForm() {
+        var elm = $('<?php echo $_code ?>_is_corporation');
+        if (elm.value == 1) {
+            $('<?php echo $_code ?>_is_sole_wrapper').show();
+            $('<?php echo $_code ?>_corporation_name_wrapper').show();
+            $('<?php echo $_code ?>_coc_number_wrapper').show();
+        } else {
+            $('<?php echo $_code ?>_is_sole_wrapper').hide();
+            $('<?php echo $_code ?>_corporation_name_wrapper').hide();
+            $('<?php echo $_code ?>_coc_number_wrapper').hide();
+        }
+    };
+
+    function updateCapayableFields() {
+        
+    }
+
+    function submitCocRequest() {
+        new Ajax.Request("<?php echo Mage::getBaseUrl(); ?>capayable/ajax/registrationcheck", {
+            method: 'get',
+            parameters: {coc_number: $('<?php echo $_code ?>_coc_number').value},
+            onSuccess: cocRequestOnSuccess,
+            onFailure:  cocRequestOnFailure
+        });
+    }
+
+    function cocRequestOnSuccess(response){
+        var json = response.responseText.evalJSON();
+        if (json.isAccepted) {
+            
+            $('<?php echo $_code ?>_corporation_name').value = json.corporationName;
+            $('<?php echo $_code ?>_street').value = json.streetName;
+            $('<?php echo $_code ?>_house_number').value = json.houseNumber;
+            $('<?php echo $_code ?>_house_suffix').value = json.houseNumberSuffix;
+            $('<?php echo $_code ?>_postcode').value = json.zipCode;
+            $('<?php echo $_code ?>_city').value = json.city;
+        
+        } else {
+            cocRequestOnFailure(response);
+        }
+    }
+
+    function cocRequestOnFailure(response){
+        $('<?php echo $_code ?>_corporation_name').value = '';
+        $('<?php echo $_code ?>_street').value = '';
+        $('<?php echo $_code ?>_house_number').value = '';
+        $('<?php echo $_code ?>_house_suffix').value = '';
+        $('<?php echo $_code ?>_postcode').value = '';
+        $('<?php echo $_code ?>_city').value = '';
+    }
+//]]>
+</script>
