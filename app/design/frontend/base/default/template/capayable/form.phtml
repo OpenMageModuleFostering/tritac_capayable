@@ -43,7 +43,7 @@
     }
     //if($_customer->getCustomerMiddlename() && $isLoggedIn)
     //  $initials = $_customer->getCustomerMiddlename();
-    $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout') || true;
+    $hasMageWorldOSC = Mage::helper('core')->isModuleEnabled('MW_Onestepcheckout');
 
     $postcode = $billingAddress->getData("postcode");
     if($_customer->getPostalCode() && $isLoggedIn) {
@@ -53,6 +53,49 @@
     $city = $billingAddress->getData("city");
     if($_customer->getCity() && $isLoggedIn) {
         $city = $_customer->getCity();
+    }
+
+    function splitHouseNo($houseNo)
+    {
+        $numberIndex = strspn($houseNo, "0123456789");
+        $result = array(
+            'number' => substr($houseNo, 0, $numberIndex),
+            'suffix' => substr($houseNo, $numberIndex)
+        );
+        return $result;
+    }
+
+    function getHouseSuffix()
+    {
+        if($isLoggedIn)
+        {
+            if($_customer->getHouseSuffix())
+            {
+                return $_customer->getHouseSuffix();
+            }
+            elseif($_customer->getStreet(1))
+            {
+                $result = splitHouseNo($_customer->getStreet(1));
+                return $result['suffix'];
+            }
+        }
+        return ''; 
+    }
+    function getHouseNumber()
+    {
+        if($isLoggedIn)
+        {
+            if($_customer->getHouseNumber())
+            {
+                return $_customer->getHouseNumber();
+            }
+            elseif($_customer->getStreet(1))
+            {
+                $result = splitHouseNo($_customer->getStreet(1));
+                return $result['number'];
+            }
+        }
+        return ''; 
     }
 
 ?>
@@ -168,13 +211,14 @@
         </div>
     </li>
 
+
     <?php if($hasMageWorldOSC): ?>
         
         <input type="hidden" id="<?php echo $_code?>_middlename" name="payment[customer_middlename]" class="input-text required-entry" value="<?php echo $initials; ?>" />
 
         <input type="hidden" id="<?php echo $_code?>_street" name="payment[street]" class="input-text required-entry" value="<?php if($_customer->getStreet(0) && $isLoggedIn) echo $_customer->getStreet(0)?>" />
-        <input type="hidden" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php if($_customer->getStreet(1) && $isLoggedIn) echo $_customer->getStreet(1)?>" />
-        <input type="hidden" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php if($_customer->getHouseSuffix() && $isLoggedIn) echo $_customer->getHouseSuffix()?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_number" name="payment[house_number]" class="validate-digits validate-greater-than-zero input-text required-entry" value="<?php echo getHouseNumber(); ?>" />
+        <input type="hidden" id="<?php echo $_code?>_house_suffix" name="payment[house_suffix]" class="input-text" value="<?php echo getHouseSuffix(); ?>" />
 
         <input type="hidden" id="<?php echo $_code?>_postcode" name="payment[postcode]" class="input-text required-entry" value="<?php echo $postcode; ?>" />
         <input type="hidden" id="<?php echo $_code?>_city" name="payment[city]" class="input-text required-entry" value="<?php echo $city; ?>" />
@@ -350,6 +394,19 @@
                 $MW_Onestepcheckout.each(names, function(index, name) {
                     val += name.substring(0,1) + '. ';
                 });
+            }
+
+            if(capayableSelector == '#capayable_house_number' && val) {
+
+                var matches = val.match(/[\d]+/);
+                if(matches && matches.length > 0){
+                    var match = matches[0];
+                    var index = match.length;
+                    var suffix = str.substr(index);
+
+                    $MW_Onestepcheckout('#capayable_house_suffix').val(suffix);
+                    val = match;
+                }
             }
 
             if(capayableSelector == '#capayable_corporation_name') {
