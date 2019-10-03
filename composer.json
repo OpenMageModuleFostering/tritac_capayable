@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/Tritac_Capayable",
+    "name": "OpenMageModuleFostering\/Tritac_Capayable",
     "type": "magento-module",
     "license": "Open-Software-License-(OSL)",
     "homepage": "",
     "description": "Gain your customers trust by allowing them to pay after delivery with Capayable.",
     "authors": [
-    {
-        "name": "Capayable",
-        "email": "capayable@tritac.com"
-    }
-],
+        {
+            "name": "Capayable",
+            "email": "capayable@tritac.com"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
